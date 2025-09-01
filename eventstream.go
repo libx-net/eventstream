@@ -67,8 +67,8 @@ func New(config *Config) (EventBus, error) {
 	case ModeMemory:
 		return newMemoryEventBus(config)
 	case ModeDistributed:
-		if config.Kafka == nil {
-			return nil, errors.New("kafka config required for distributed mode")
+		if config.Distributed == nil || config.Distributed.MQAdapter == nil {
+			return nil, errors.New("MQAdapter required for distributed mode")
 		}
 		return newDistributedEventBus(config)
 	default:
@@ -140,6 +140,5 @@ func newMemoryEventBus(config *Config) (EventBus, error) {
 
 // newDistributedEventBus 创建分布式模式事件总线
 func newDistributedEventBus(config *Config) (EventBus, error) {
-	// TODO: 实现分布式模式
-	return nil, errors.New("distributed mode not implemented yet")
+	return NewDistributedEventBus(config)
 }

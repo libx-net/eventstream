@@ -13,6 +13,9 @@ type Event struct {
 	// Topic 事件主题
 	Topic string `json:"topic"`
 
+	// Type 事件类型
+	Type string `json:"type"`
+
 	// Data 事件数据
 	Data interface{} `json:"data"`
 
@@ -27,6 +30,9 @@ type Event struct {
 
 	// Version 事件版本
 	Version string `json:"version,omitempty"`
+
+	// Metadata 事件元数据
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // NewEvent 创建新事件
@@ -38,6 +44,7 @@ func NewEvent(topic string, data interface{}) *Event {
 		Timestamp: time.Now(),
 		Headers:   make(map[string]interface{}),
 		Version:   "1.0",
+		Metadata:  make(map[string]interface{}),
 	}
 }
 

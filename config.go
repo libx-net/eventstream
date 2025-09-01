@@ -25,11 +25,11 @@ type Config struct {
 	// Pool 协程池配置
 	Pool PoolConfig `json:"pool"`
 
-	// Kafka 配置 (仅分布式模式需要)
-	Kafka *KafkaConfig `json:"kafka,omitempty"`
-
 	// Memory 内存模式配置
 	Memory *MemoryConfig `json:"memory,omitempty"`
+
+	// Distributed 分布式模式配置
+	Distributed *DistributedConfig `json:"distributed,omitempty"`
 
 	// Logger 日志配置
 	Logger LoggerConfig `json:"logger"`
@@ -62,60 +62,6 @@ type MemoryConfig struct {
 	EnableMetrics bool `json:"enable_metrics"`
 }
 
-// KafkaConfig Kafka配置
-type KafkaConfig struct {
-	// Brokers Kafka代理地址列表
-	Brokers []string `json:"brokers"`
-
-	// Producer 生产者配置
-	Producer ProducerConfig `json:"producer"`
-
-	// Consumer 消费者默认配置 (不包含GroupID)
-	Consumer ConsumerConfig `json:"consumer"`
-}
-
-// ProducerConfig 生产者配置
-type ProducerConfig struct {
-	// BatchSize 批量大小
-	BatchSize int `json:"batch_size"`
-
-	// BatchTimeout 批量超时时间
-	BatchTimeout time.Duration `json:"batch_timeout"`
-
-	// Compression 压缩算法: "gzip", "snappy", "lz4", "zstd"
-	Compression string `json:"compression"`
-
-	// MaxMessageBytes 最大消息大小
-	MaxMessageBytes int `json:"max_message_bytes"`
-
-	// RequiredAcks 需要的确认数量
-	RequiredAcks int `json:"required_acks"`
-
-	// WriteTimeout 写入超时时间
-	WriteTimeout time.Duration `json:"write_timeout"`
-
-	// ReadTimeout 读取超时时间
-	ReadTimeout time.Duration `json:"read_timeout"`
-}
-
-// ConsumerConfig 消费者默认配置 (不包含GroupID，GroupID在订阅时指定)
-type ConsumerConfig struct {
-	// StartOffset 起始偏移量: "earliest", "latest"
-	StartOffset string `json:"start_offset"`
-
-	// CommitInterval 提交间隔
-	CommitInterval time.Duration `json:"commit_interval"`
-
-	// MaxWait 最大等待时间
-	MaxWait time.Duration `json:"max_wait"`
-
-	// MinBytes 最小字节数
-	MinBytes int `json:"min_bytes"`
-
-	// MaxBytes 最大字节数
-	MaxBytes int `json:"max_bytes"`
-}
-
 // LoggerConfig 日志配置
 type LoggerConfig struct {
 	// Level 日志级别: "debug", "info", "warn", "error"
@@ -129,6 +75,19 @@ type LoggerConfig struct {
 
 	// FilePath 文件路径 (当Output为"file"时)
 	FilePath string `json:"file_path,omitempty"`
+}
+
+// DistributedConfig 分布式模式配置
+type DistributedConfig struct {
+	// MQAdapter 是要使用的消息队列适配器。这是必填字段。
+	MQAdapter MQAdapter `json:"-"`
+
+	// EnableMetrics 控制是否为此事件总线实例收集指标。
+	EnableMetrics bool `json:"enable_metrics"`
+
+	// Serializer 是用于编码和解码事件的序列化器。
+	// 如果未提供，将使用默认的JSON序列化器。
+	Serializer EventSerializer `json:"-"`
 }
 
 // SubscribeConfig 订阅配置
@@ -193,11 +152,8 @@ func (c *Config) Validate() error {
 
 	// 验证分布式模式配置
 	if c.Mode == ModeDistributed {
-		if c.Kafka == nil {
-			return errors.New("kafka config is required for distributed mode")
-		}
-		if err := c.Kafka.Validate(); err != nil {
-			return err
+		if c.Distributed == nil || c.Distributed.MQAdapter == nil {
+			return errors.New("MQAdapter is required for distributed mode")
 		}
 	}
 
@@ -206,15 +162,6 @@ func (c *Config) Validate() error {
 		if err := c.Memory.Validate(); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-// Validate 验证Kafka配置
-func (k *KafkaConfig) Validate() error {
-	if len(k.Brokers) == 0 {
-		return errors.New("kafka brokers cannot be empty")
 	}
 
 	return nil
@@ -256,31 +203,17 @@ func DefaultConfig() *Config {
 	}
 }
 
-// DefaultDistributedConfig 返回默认分布式配置
-func DefaultDistributedConfig(brokers []string) *Config {
+// DefaultDistributedConfig 返回一个合理的分布式模式默认配置。
+// 注意：MQAdapter 必须由用户单独提供。
+func DefaultDistributedConfig() *Config {
 	config := DefaultConfig()
 	config.Mode = ModeDistributed
 	config.Pool.Size = 2000
-	config.Kafka = &KafkaConfig{
-		Brokers: brokers,
-		Producer: ProducerConfig{
-			BatchSize:       100,
-			BatchTimeout:    10 * time.Millisecond,
-			Compression:     "gzip",
-			MaxMessageBytes: 1000000, // 1MB
-			RequiredAcks:    1,
-			WriteTimeout:    10 * time.Second,
-			ReadTimeout:     10 * time.Second,
-		},
-		Consumer: ConsumerConfig{
-			StartOffset:    "latest",
-			CommitInterval: 1 * time.Second,
-			MaxWait:        500 * time.Millisecond,
-			MinBytes:       1,
-			MaxBytes:       1000000, // 1MB
-		},
+	config.Memory = nil // 分布式模式下不使用内存配置
+	config.Distributed = &DistributedConfig{
+		EnableMetrics: false,
+		Serializer:    &DefaultEventSerializer{},
 	}
-	config.Memory = nil
 	return config
 }
 
