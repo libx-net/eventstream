@@ -1,294 +1,61 @@
-# EventStream - 分布式事件总线
+警告：此项目仍在开发中，禁止用于生产环境
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://golang.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+EventStream — 轻量级事件总线库（Go）
 
-EventStream 是一个基于 Go 语言的分布式、高性能、高可靠事件总线库，支持内存模式和分布式模式。
+简介
+EventStream 是一个用于构建内存或分布式事件传递的轻量级 Go 库。该项目仍在积极开发中，API 可能发生变化，当前版本不适合在生产环境中使用。请在生产环境使用前自行评估稳定性并进行充分测试。
 
-## 特性
+主要功能
+- 可插拔的 MQ 适配器接口（支持本地内存模式与外部 MQ）
+- 事件序列化与反序列化支持
+- 订阅者分组（consumer group）能力与并发控制
+- 可选历史记录与统计指标
+- 完整的单元测试覆盖和示例代码
 
-- **高性能**: 基于 ants 协程池的高效并发处理
-- **双模式**: 支持内存模式和分布式模式，可无缝切换
-- **零依赖启动**: 内存模式无需外部依赖
-- **可靠性**: 分布式模式基于 Kafka，支持消息持久化和故障恢复
-- **简单易用**: 统一的 API 接口，只需三个核心方法
-- **可观测性**: 内置指标收集和事件历史记录
-- **可配置**: 丰富的配置选项，支持重试策略、并发控制等
+安装
+在 Go 模块项目中直接引用本模块：
+	go get libx.net/eventstream
 
-## 快速开始
+快速开始（内存模式）
+1. 使用默认配置创建事件总线：
+	cfg := eventstream.DefaultConfig()
+	bus, err := eventstream.New(cfg)
+	if err != nil {
+		// 处理错误
+	}
+	defer bus.Close()
 
-### 安装
+2. 订阅主题并处理事件：
+	sub, err := bus.On("user.registered", func(ctx context.Context, e *eventstream.Event) error {
+		// 处理事件
+		return nil
+	})
+	if err == nil {
+		defer bus.Off(sub)
+	}
 
-```bash
-go get libx.net/eventstream
-```
+3. 发布事件：
+	_ = bus.Emit(context.Background(), "user.registered", map[string]interface{}{"user_id": "u1"})
 
-### 基本使用
+分布式模式（概览）
+- 提供 DistributedConfig，可以注入自定义 MQAdapter（需实现 Publish/Subscribe/Ack/Close）
+- 支持不同消费者组（consumer group）隔离消费
+- 详见 docs/distributed_usage.md 中的配置和示例
 
-#### 内存模式 (适合单体应用、开发测试)
+示例
+examples/ 下提供三个示例：
+- memory_basic：内存模式的基本示例
+- memory_multiple：多个消费者组示例
+- distributed_basic：分布式适配器示例（包含演示用简单 MQAdapter）
 
-```go
-package main
+测试与覆盖率
+仓库包含大量单元测试，当前测试覆盖率约 78.6%：
+	go test ./... -cover
 
-import (
-    "context"
-    "fmt"
-    "log"
-    
-    "libx.net/eventstream"
-)
+贡献指南
+- 使用 go fmt / go vet 保持代码风格一致
+- 新增功能请补充对应单元测试，目标覆盖率不低于 50%
+- 提交信息遵循 Angular commit message 规范（英文）
 
-func main() {
-    // 创建内存模式配置
-    config := eventstream.DefaultConfig()
-    
-    // 创建EventBus
-    bus, err := eventstream.New(config)
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer bus.Close()
-    
-    // 订阅事件
-    subscription, err := bus.On("user.registered", func(ctx context.Context, event *eventstream.Event) error {
-        fmt.Printf("用户注册: %v\n", event.Data)
-        return nil
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // 发布事件
-    ctx := context.Background()
-    err = bus.Emit(ctx, "user.registered", map[string]interface{}{
-        "user_id": "12345",
-        "email":   "user@example.com",
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // 取消订阅
-    bus.Off(subscription)
-}
-```
-
-#### 分布式模式 (适合微服务架构、生产环境)
-
-```go
-// 创建分布式模式配置
-config := eventstream.DefaultDistributedConfig([]string{"localhost:9092"})
-
-// 其他使用方式完全相同
-bus, err := eventstream.New(config)
-// ...
-```
-
-## 核心概念
-
-### 运行模式
-
-| 特性 | 内存模式 | 分布式模式 |
-|------|----------|------------|
-| **性能** | 极高 (纳秒级) | 高 (毫秒级) |
-| **可靠性** | 进程重启丢失 | 持久化保证 |
-| **扩展性** | 单进程 | 多节点 |
-| **依赖** | 仅ants | ants + Kafka |
-| **适用场景** | 单体应用、开发测试 | 微服务、生产环境 |
-
-### 核心 API
-
-```go
-type EventBus interface {
-    // 发布事件
-    Emit(ctx context.Context, topic string, data interface{}) error
-    
-    // 订阅事件
-    On(topic string, handler EventHandler, opts ...SubscribeOption) (Subscription, error)
-    
-    // 取消订阅
-    Off(subscription Subscription) error
-    
-    // 优雅关闭
-    Close() error
-}
-```
-
-## 高级功能
-
-### 消费者组 (多服务消费同一事件)
-
-```go
-// 同一个事件可以被多个消费者组独立消费
-// 通知服务消费者组
-bus.On("user.registered", sendWelcomeEmail,
-    eventstream.WithConsumerGroup("notification-service"))
-
-// 积分服务消费者组  
-bus.On("user.registered", grantWelcomePoints,
-    eventstream.WithConsumerGroup("points-service"))
-
-// 分析服务消费者组
-bus.On("user.registered", recordUserAnalytics,
-    eventstream.WithConsumerGroup("analytics-service"))
-
-// 发布一次事件，三个服务都会收到
-bus.Emit(ctx, "user.registered", userData)
-```
-
-### 订阅选项
-
-```go
-// 带重试策略和消费者组的订阅
-subscription, err := bus.On("order.created", 
-    handleOrder,
-    eventstream.WithConsumerGroup("order-service"),     // 消费者组名称
-    eventstream.WithConcurrency(10),                    // 并发处理数量
-    eventstream.WithRetryPolicy(&eventstream.RetryPolicy{
-        MaxRetries:      3,                             // 最大重试次数
-        BackoffStrategy: "exponential",                 // 指数退避
-        InitialDelay:    100 * time.Millisecond,        // 初始延迟
-        MaxDelay:        5 * time.Second,               // 最大延迟
-        Multiplier:      2.0,                           // 退避乘数
-    }),
-)
-```
-
-### 事件处理器
-
-```go
-func handleUserRegistered(ctx context.Context, event *eventstream.Event) error {
-    // 反序列化事件数据
-    var userData struct {
-        UserID string `json:"user_id"`
-        Email  string `json:"email"`
-    }
-    
-    if err := event.Unmarshal(&userData); err != nil {
-        return err
-    }
-    
-    // 处理业务逻辑
-    fmt.Printf("新用户注册: %s\n", userData.Email)
-    
-    return nil
-}
-```
-
-### 统计信息 (内存模式)
-
-```go
-if memBus, ok := bus.(eventstream.MemoryEventBus); ok {
-    // 获取统计信息
-    stats := memBus.GetStats()
-    fmt.Printf("统计信息: %+v\n", stats)
-    
-    // 获取事件历史
-    history := memBus.GetHistory(10)
-    fmt.Printf("最近10个事件: %+v\n", history)
-}
-```
-
-## 配置
-
-### 内存模式配置
-
-```go
-config := &eventstream.Config{
-    Mode: "memory",
-    Pool: eventstream.PoolConfig{
-        Size:           1000,                    // 协程池大小
-        ExpiryDuration: 10 * time.Second,       // 协程过期时间
-        PreAlloc:       false,                  // 是否预分配
-    },
-    Memory: &eventstream.MemoryConfig{
-        BufferSize:     1000,                   // 事件缓冲区大小
-        EnableHistory:  true,                   // 启用历史记录
-        MaxHistorySize: 10000,                  // 最大历史记录数
-        EnableMetrics:  true,                   // 启用指标收集
-    },
-}
-```
-
-### 分布式模式配置
-
-```go
-config := &eventstream.Config{
-    Mode: "distributed",
-    Pool: eventstream.PoolConfig{
-        Size: 2000,
-    },
-    // MQ: MQAdapter 具体实现,
-}
-```
-
-## 示例
-
-查看 `examples/` 目录获取更多示例：
-
-- [基础内存模式示例](examples/memory/basic.go)
-- [多消费者组示例](examples/memory/multiple_consumers.go)
-- [分布式模式示例](examples/distributed/) (待实现)
-- [微服务架构示例](examples/microservice/) (待实现)
-
-## 性能
-
-### 内存模式
-- **延迟**: < 100ns (事件发布)
-- **吞吐量**: 100K+ events/second
-- **内存**: 稳定使用，无泄漏
-
-### 分布式模式
-- **延迟**: < 1ms (本地处理)
-- **吞吐量**: 10K+ events/second
-- **可用性**: 99.9%+
-
-## 最佳实践
-
-1. **选择合适的模式**
-   - 开发测试: 使用内存模式
-   - 单体应用: 使用内存模式
-   - 微服务架构: 使用分布式模式
-
-2. **事件设计**
-   - 使用清晰的主题命名 (如: `user.registered`, `order.created`)
-   - 保持事件数据结构简单
-   - 避免在事件中包含敏感信息
-
-3. **消费者组设计**
-   - 使用服务名作为消费者组名 (如: `notification-service`, `analytics-service`)
-   - 同一事件的不同处理逻辑使用不同消费者组
-   - 为不同消费者组设置合适的重试策略和并发配置
-
-4. **错误处理**
-   - 合理设置重试策略
-   - 记录处理失败的事件
-   - 实现幂等性处理
-
-5. **性能优化**
-   - 根据负载调整协程池大小
-   - 使用适当的并发处理数量
-   - 监控事件处理延迟
-
-## 开发状态
-
-- 内存模式 - 已完成
-- 分布式模式 - 开发中
-- 文档和示例 - 持续完善
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-MIT License - 详见 [LICENSE](LICENSE) 文件。
-
-## 技术栈
-
-- **Go**: 1.23+
-- **协程池**: [ants](https://github.com/panjf2000/ants)
-
----
-
-EventStream - 让事件驱动架构变得简单而强大！
+许可
+本项目遵循仓库根目录 LICENSE 文件中的开源许可协议。
