@@ -2,50 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [Unreleased]
 
-### Summary
-- Redesigned consumer-group architecture: subscription-level consumer groups support multiple independent consumers for the same event.
-- Flexible per-subscription configuration: retry policies, concurrency, buffer sizes, and distributed-mode options.
-- Dynamic management: add/remove consumer groups at runtime.
-- Dual-mode design: high-performance in-memory mode (implemented) and planned distributed mode for cross-service communication.
-- Observability & reliability: built-in metrics, retry mechanisms, graceful shutdown, and error handling.
-- Examples and tests updated to validate the new architecture.
-
 ### Added
-- Multiple consumer groups support (same event consumed independently by different groups).
-- Subscription options: eventstream.WithConsumerGroup, WithConcurrency, WithRetryPolicy, WithBufferSize, etc.
-- Tests and examples demonstrating multi-group consumption and isolation.
+- 将 adapter、kafka、internal 包重构并合并到主包，消除循环导入问题。
+- 为核心模块补充大量单元测试（config、utils、memory、distributed、adapter、kafka），新增测试文件。
+- 新增 distributed.go，实现分布式事件总线的主逻辑与订阅管理。
+- 新增 kafka_adapter.go 以及对应的单元测试。
+- 新增 README、示例（examples/*）的修正与完善。
 
-### API examples
-```go
-bus.On("user.registered", sendWelcomeEmail, eventstream.WithConsumerGroup("notification-service"))
-bus.On("user.registered", grantWelcomePoints, eventstream.WithConsumerGroup("points-service"))
-bus.On("user.registered", recordAnalytics, eventstream.WithConsumerGroup("analytics-service"))
-```
+### Changed
+- 统一 Event 类型定义与序列化逻辑，修复跨包类型冲突。
+- 统一项目包结构，简化导入路径和依赖关系。
+- 提升测试覆盖率至 78.6%。
 
-### Problems solved
-- Replaces global/fixed consumer group model with subscription-level groups so the same event can be consumed by multiple services independently.
+### Fixed
+- 修复重构后导致的 go test 失败问题（循环导入、类型不匹配等）。
+- 修复 examples 中的类型转换和字段访问错误，使示例可直接运行。
 
-### Performance (reported)
-- Emit only: ~93.36 ns/op
-- Emit + process: ~614.2 ns/op
-- Multi-consumer-groups (5 groups): ~774.3 ns/op
-- Throughput: ~1M+ events/second
-
-### Documentation & examples
-- docs/consumer-groups.md (merged)
-- examples/memory/multiple_consumers.go
-- README.md updated with usage and examples
-
-### Breaking changes
-- Consumer group identifier moved from global config to subscription options.
-- Configuration structure updated to support per-subscription consumer groups.
-
-### Roadmap (planned)
-- Distributed mode (message queue based producer/consumer, persistence, replay, DLQ)
-- Event filtering/routing, schema validation, batch processing, delayed events
-- Monitoring dashboard, CLI, Docker images, Kubernetes operator
+---
