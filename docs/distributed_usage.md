@@ -141,11 +141,11 @@ if err := e.Unmarshal(&p); err != nil {
 
 1. 构建 Kafka 配置并创建 Adapter：
 ```go
-kCfg := kafka.Config{
+kCfg := eventstream.KafkaConfig{
     Brokers: []string{"localhost:9092"},
     // 其它配置项（压缩、分区、offset 等）
 }
-kAdapter, err := kafka.NewAdapter(kCfg)
+kAdapter, err := eventstream.NewKafkaAdapter(kCfg)
 if err != nil {
     // 处理错误
 }
@@ -218,7 +218,9 @@ func (s *SimpleMQAdapter) Close() error {
 
 ## 参考示例
 
-见仓库 examples/distributed_basic、examples/memory_basic 和 examples/memory_multiple，分别演示分布式模式与内存模式的典型用法。
+见仓库 examples/distributed_basic、examples/memory_basic 和 examples/memory_advanced，分别演示分布式模式与内存模式的典型用法。
+
+注意：内存模式下的多个消费者组示例（memory_advanced）主要用于演示目的，在实际单机环境中，每个事件只会被分发一次到所有处理器。真正的消费者组隔离功能仅在分布式模式下有效。
 
 --- 
 

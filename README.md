@@ -10,60 +10,93 @@
 [![License](https://img.shields.io/github/license/libx-net/eventstream)](LICENSE)
 
 
-简介
+## 简介
 EventStream 是一个用于构建内存或分布式事件传递的轻量级 Go 库。该项目仍在积极开发中，API 可能发生变化，当前版本不适合在生产环境中使用。请在生产环境使用前自行评估稳定性并进行充分测试。
 
-主要功能
+## 主要功能
 - 可插拔的 MQ 适配器接口（支持本地内存模式与外部 MQ）
 - 事件序列化与反序列化支持
 - 订阅者分组（consumer group）能力与并发控制
 - 可选历史记录与统计指标
 - 完整的单元测试覆盖和示例代码
 
-安装
+## 安装
 在 Go 模块项目中直接引用本模块：
 ```
 go get libx.net/eventstream
 ```
 
-快速开始（内存模式）
+## 快速开始
 
-1. 使用默认配置创建事件总线：
+### 分布式模式 - 使用内置 KafkaAdapter
+
+1. 创建 Kafka 配置并初始化适配器：
 ```go
-cfg := eventstream.DefaultConfig()
+kafkaCfg := eventstream.KafkaConfig{
+    Brokers: []string{"localhost:9092"},
+    // 其他 Kafka 配置选项
+}
+kafkaAdapter, err := eventstream.NewKafkaAdapter(kafkaCfg)
+if err != nil {
+    // 处理错误
+}
+defer kafkaAdapter.Close()
+```
+
+2. 创建分布式事件总线配置：
+```go
+cfg := eventstream.DefaultDistributedConfig()
+cfg.Distributed.MQAdapter = kafkaAdapter
+```
+
+3. 创建事件总线并订阅事件：
+```go
 bus, err := eventstream.New(cfg)
 if err != nil {
     // 处理错误
 }
 defer bus.Close()
-```
 
-2. 订阅主题并处理事件：
-```go
-sub, err := bus.On("user.registered", func(ctx context.Context, e *eventstream.Event) error {
-    // 处理事件
+// 订阅主题
+sub, err := bus.On("user.registered", "user-service", func(ctx context.Context, e *eventstream.Event) error {
+    var userData map[string]interface{}
+    if err := e.Unmarshal(&userData); err != nil {
+        return err
+    }
+    fmt.Printf("处理用户注册事件: %v\n", userData)
     return nil
 })
-if err == nil {
-    defer bus.Off(sub)
+if err != nil {
+    // 处理错误
+}
+defer bus.Off(sub)
+```
+
+4. 发布事件：
+```go
+err = bus.Emit(context.Background(), "user.registered", map[string]interface{}{
+    "user_id": "u1",
+    "email": "user@example.com",
+    "name": "Test User"
+})
+if err != nil {
+    // 处理错误
 }
 ```
 
-3. 发布事件：
-```go
-_ = bus.Emit(context.Background(), "user.registered", map[string]interface{}{"user_id": "u1"})
-```
+### 内存模式（用于本地测试和开发）
+- 适用于单机环境，事件在进程内传递
+- 无需外部消息队列依赖，适合测试和开发
+- 消费者组（group）参数主要用于接口兼容性，在单机环境中实际意义有限
+- 详见 `examples/memory_basic` 中的基础示例
 
-分布式模式（概览）
-- 提供 `DistributedConfig`，可以注入自定义 `MQAdapter`（需实现 Publish/Subscribe/Ack/Close）
-- 支持不同消费者组（consumer group）隔离消费
-- 详见 `docs/distributed_usage.md` 中的配置和示例
+## 示例
+`examples/` 目录下提供了几个示例：
+- `memory_basic`：演示了内存模式的基础用法，适用于单机测试和开发。
+- `kafka_adapter`：演示了如何使用内置的 Kafka 适配器来构建分布式事件流。
+- `custom_adapter`：演示了如何实现一个自定义的 MQ 适配器（以 RabbitMQ 为例），并将其集成到 `event-stream` 中。
 
-示例
-`examples/` 下提供三个示例：
-- `memory_basic`：内存模式的基本示例
-- `memory_multiple`：多个消费者组示例
-- `distributed_basic`：分布式适配器示例（包含演示用简单 MQAdapter）
+要了解如何实现自定义的分布式适配器，请重点参考 `examples/custom_adapter` 示例。
 
 贡献指南
 - 使用 `gofmt` / `go vet` 保持代码风格一致
