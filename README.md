@@ -2,6 +2,13 @@
 
 # EventStream — 轻量级事件总线库（Go）
 
+[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/libx-net/eventstream/test.yml?branch=main&label=Build&logo=github)](https://github.com/libx-net/eventstream/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/libx-net/eventstream)](https://goreportcard.com/report/github.com/libx-net/eventstream)
+[![golangci-lint](https://img.shields.io/badge/golangci--lint-passing-brightgreen)](https://golangci-lint.run/)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/libx-net/eventstream)](https://golang.org/)
+[![License](https://img.shields.io/github/license/libx-net/eventstream)](LICENSE)
+
+
 简介
 EventStream 是一个用于构建内存或分布式事件传递的轻量级 Go 库。该项目仍在积极开发中，API 可能发生变化，当前版本不适合在生产环境中使用。请在生产环境使用前自行评估稳定性并进行充分测试。
 
@@ -58,7 +65,9 @@ _ = bus.Emit(context.Background(), "user.registered", map[string]interface{}{"us
 - `distributed_basic`：分布式适配器示例（包含演示用简单 MQAdapter）
 
 测试与覆盖率
-仓库包含大量单元测试，当前测试覆盖率约 78.6%：
+[![Coverage](https://img.shields.io/badge/coverage-78.6%25-brightgreen)](https://github.com/libx-net/eventstream/actions)
+
+仓库包含大量单元测试和集成测试，当前测试覆盖率约 78.6%：
 ```
 go test ./... -cover
 ```
