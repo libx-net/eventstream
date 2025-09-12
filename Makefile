@@ -48,9 +48,9 @@ clean:
 benchmark:
 	go test -bench=. -benchmem ./...
 
-# 生成测试覆盖率报告
+# 生成测试覆盖率报告（排除examples目录）
 coverage:
-	go test -coverprofile=coverage.out ./...
+	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /examples/)
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 

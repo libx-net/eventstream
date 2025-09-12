@@ -3,6 +3,7 @@
 # EventStream — 轻量级事件总线库（Go）
 
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/libx-net/eventstream/test.yml?branch=main&label=Build&logo=github)](https://github.com/libx-net/eventstream/actions)
+[![codecov](https://codecov.io/gh/libx-net/eventstream/branch/main/graph/badge.svg)](https://codecov.io/gh/libx-net/eventstream)
 [![Go Report Card](https://goreportcard.com/badge/github.com/libx-net/eventstream)](https://goreportcard.com/report/github.com/libx-net/eventstream)
 [![golangci-lint](https://img.shields.io/badge/golangci--lint-passing-brightgreen)](https://golangci-lint.run/)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/libx-net/eventstream)](https://golang.org/)
@@ -64,18 +65,10 @@ _ = bus.Emit(context.Background(), "user.registered", map[string]interface{}{"us
 - `memory_multiple`：多个消费者组示例
 - `distributed_basic`：分布式适配器示例（包含演示用简单 MQAdapter）
 
-测试与覆盖率
-[![Coverage](https://img.shields.io/badge/coverage-78.6%25-brightgreen)](https://github.com/libx-net/eventstream/actions)
-
-仓库包含大量单元测试和集成测试，当前测试覆盖率约 78.6%：
-```
-go test ./... -cover
-```
-
 贡献指南
 - 使用 `gofmt` / `go vet` 保持代码风格一致
 - 新增功能请补充对应单元测试，目标覆盖率不低于 50%
 - 提交信息遵循 Angular commit message 规范（英文）
 
 许可
-本项目遵循仓库根目录 LICENSE 文件中的开源许可协议。
+本项目遵循 [MIT](LICENSE) 开源许可协议。
