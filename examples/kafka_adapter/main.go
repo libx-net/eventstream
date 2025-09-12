@@ -54,7 +54,7 @@ func main() {
 
 	// 订阅用户事件
 	userSubscription, err := eventBus.On("user.created", "user-service", func(ctx context.Context, event *eventstream.Event) error {
-		fmt.Printf("📧 Received user created event: %s\n", string(event.Data))
+		fmt.Printf("📧 Received user created event: %s\n", string(event.Data.([]byte)))
 		return nil
 	})
 	if err != nil {
@@ -64,7 +64,7 @@ func main() {
 
 	// 订阅订单事件
 	orderSubscription, err := eventBus.On("order.placed", "order-service", func(ctx context.Context, event *eventstream.Event) error {
-		fmt.Printf("📦 Received order placed event: %s\n", string(event.Data))
+		fmt.Printf("📦 Received order placed event: %s\n", string(event.Data.([]byte)))
 		return nil
 	})
 	if err != nil {
@@ -81,7 +81,7 @@ func main() {
 	fmt.Println("\nPublishing user events...")
 	for i := 1; i <= 3; i++ {
 		userData := fmt.Sprintf(`{"id": %d, "name": "User %d", "email": "user%d@example.com"}`, i, i, i)
-		if err := eventBus.Emit(ctx, "user.created", []byte(userData)); err != nil {
+		if err := eventBus.Emit(ctx, eventstream.NewEvent("user.created", []byte(userData))); err != nil {
 			log.Printf("Failed to emit user.created event: %v", err)
 		}
 		time.Sleep(200 * time.Millisecond)
@@ -91,7 +91,7 @@ func main() {
 	fmt.Println("\nPublishing order events...")
 	for i := 1; i <= 2; i++ {
 		orderData := fmt.Sprintf(`{"id": "order-%d", "userId": %d, "amount": %.2f}`, i, i, 100.0*float64(i))
-		if err := eventBus.Emit(ctx, "order.placed", []byte(orderData)); err != nil {
+		if err := eventBus.Emit(ctx, eventstream.NewEvent("order.placed", []byte(orderData))); err != nil {
 			log.Printf("Failed to emit order.placed event: %v", err)
 		}
 		time.Sleep(300 * time.Millisecond)

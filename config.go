@@ -84,10 +84,6 @@ type DistributedConfig struct {
 
 	// EnableMetrics 控制是否为此事件总线实例收集指标。
 	EnableMetrics bool `json:"enable_metrics"`
-
-	// Serializer 是用于编码和解码事件的序列化器。
-	// 如果未提供，将使用默认的JSON序列化器。
-	Serializer EventSerializer `json:"-"`
 }
 
 // SubscribeConfig 订阅配置
@@ -212,7 +208,6 @@ func DefaultDistributedConfig() *Config {
 	config.Memory = nil // 分布式模式下不使用内存配置
 	config.Distributed = &DistributedConfig{
 		EnableMetrics: false,
-		Serializer:    &DefaultEventSerializer{},
 	}
 	return config
 }

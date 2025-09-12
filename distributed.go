@@ -2,6 +2,7 @@ package eventstream
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -11,14 +12,13 @@ import (
 
 // DistributedEventBus 分布式模式事件总线实现
 type DistributedEventBus struct {
-	config     *Config
-	adapter    MQAdapter
-	serializer EventSerializer
-	pool       *ants.Pool
-	subMgr     *distributedSubscriberManager
-	metrics    *distributedEventMetrics
-	closed     int32
-	closeCh    chan struct{}
+	config  *Config
+	adapter MQAdapter
+	pool    *ants.Pool
+	subMgr  *distributedSubscriberManager
+	metrics *distributedEventMetrics
+	closed  int32
+	closeCh chan struct{}
 }
 
 // NewDistributedEventBus 创建分布式模式事件总线
@@ -38,18 +38,12 @@ func NewDistributedEventBus(config *Config) (*DistributedEventBus, error) {
 		return nil, fmt.Errorf("failed to create pool: %w", err)
 	}
 
-	serializer := config.Distributed.Serializer
-	if serializer == nil {
-		serializer = &DefaultEventSerializer{}
-	}
-
 	eb := &DistributedEventBus{
-		config:     config,
-		adapter:    config.Distributed.MQAdapter,
-		serializer: serializer,
-		pool:       pool,
-		subMgr:     newDistributedSubscriberManager(),
-		closeCh:    make(chan struct{}),
+		config:  config,
+		adapter: config.Distributed.MQAdapter,
+		pool:    pool,
+		subMgr:  newDistributedSubscriberManager(),
+		closeCh: make(chan struct{}),
 	}
 
 	// 初始化指标收集
@@ -61,33 +55,34 @@ func NewDistributedEventBus(config *Config) (*DistributedEventBus, error) {
 }
 
 // Emit 发布事件
-func (eb *DistributedEventBus) Emit(ctx context.Context, topic string, data interface{}) error {
+func (eb *DistributedEventBus) Emit(ctx context.Context, event *Event) error {
 	if eb.isClosed() {
 		return fmt.Errorf("eventbus is closed")
 	}
 
+	if event == nil {
+		return fmt.Errorf("event cannot be nil")
+	}
+
 	// 验证主题
-	if err := validateTopic(topic); err != nil {
+	if err := validateTopic(event.Topic); err != nil {
 		return err
 	}
 
-	// 创建事件
-	event := NewEvent(topic, data)
-
 	// 序列化事件
-	eventData, err := eb.serializer.Serialize(event)
+	eventData, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to serialize event: %w", err)
 	}
 
 	// 发布到消息队列
-	if err := eb.adapter.Publish(ctx, topic, eventData); err != nil {
+	if err := eb.adapter.Publish(ctx, event.Topic, eventData); err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 
 	// 更新指标
 	if eb.metrics != nil {
-		eb.metrics.incEmitted(topic)
+		eb.metrics.incEmitted(event.Topic)
 	}
 
 	return nil
@@ -115,7 +110,7 @@ func (eb *DistributedEventBus) On(topic string, group string, handler EventHandl
 	config.ConsumerGroup = group
 
 	// 创建订阅
-	sub := newDistributedSubscription(topic, handler, config, eb.adapter, eb.serializer, eb.pool)
+	sub := newDistributedSubscription(topic, handler, config, eb.adapter, eb.pool)
 
 	// 启动订阅处理
 	ctx := context.Background()
@@ -248,27 +243,25 @@ func (sm *distributedSubscriberManager) count() int {
 
 // distributedSubscription 分布式订阅实现
 type distributedSubscription struct {
-	id         string
-	topic      string
-	handler    EventHandler
-	config     *SubscribeConfig
-	adapter    MQAdapter
-	serializer EventSerializer
-	pool       *ants.Pool
-	msgChan    <-chan Message
-	closeFunc  func()
-	closed     int32
+	id        string
+	topic     string
+	handler   EventHandler
+	config    *SubscribeConfig
+	adapter   MQAdapter
+	pool      *ants.Pool
+	msgChan   <-chan Message
+	closeFunc func()
+	closed    int32
 }
 
-func newDistributedSubscription(topic string, handler EventHandler, config *SubscribeConfig, adapter MQAdapter, serializer EventSerializer, pool *ants.Pool) *distributedSubscription {
+func newDistributedSubscription(topic string, handler EventHandler, config *SubscribeConfig, adapter MQAdapter, pool *ants.Pool) *distributedSubscription {
 	return &distributedSubscription{
-		id:         generateSubscriptionID(),
-		topic:      topic,
-		handler:    handler,
-		config:     config,
-		adapter:    adapter,
-		serializer: serializer,
-		pool:       pool,
+		id:      generateSubscriptionID(),
+		topic:   topic,
+		handler: handler,
+		config:  config,
+		adapter: adapter,
+		pool:    pool,
 	}
 }
 
@@ -304,15 +297,15 @@ func (s *distributedSubscription) processMessages(ctx context.Context) {
 		}
 
 		// 反序列化事件
-		event, err := s.serializer.Deserialize(msg.Value())
-		if err != nil {
+		var event Event
+		if err := json.Unmarshal(msg.Value(), &event); err != nil {
 			fmt.Printf("Failed to deserialize event: %v\n", err)
 			continue
 		}
 
 		// 异步处理事件
 		if err := s.pool.Submit(func() {
-			s.handleEvent(ctx, event, msg)
+			s.handleEvent(ctx, &event, msg)
 		}); err != nil {
 			fmt.Printf("Failed to submit event processing task: %v\n", err)
 		}

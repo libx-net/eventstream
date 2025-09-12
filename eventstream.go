@@ -10,7 +10,7 @@ import (
 // EventBus 事件总线接口
 type EventBus interface {
 	// Emit 发布事件
-	Emit(ctx context.Context, topic string, data interface{}) error
+	Emit(ctx context.Context, event *Event) error
 
 	// On 订阅事件
 	On(topic string, group string, handler EventHandler, opts ...SubscribeOption) (Subscription, error)

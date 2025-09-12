@@ -166,10 +166,6 @@ func TestDefaultDistributedConfig(t *testing.T) {
 		t.Error("Distributed config should not be nil")
 	}
 
-	if config.Distributed.Serializer == nil {
-		t.Error("Serializer should not be nil")
-	}
-
 	if config.Memory != nil {
 		t.Error("Memory config should be nil for distributed mode")
 	}

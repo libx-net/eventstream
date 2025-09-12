@@ -56,7 +56,7 @@ func main() {
 	go func() {
 		for i := 0; i < 5; i++ {
 			data := map[string]interface{}{"userId": i, "name": fmt.Sprintf("user-%d", i)}
-			if err := bus.Emit(context.Background(), "user.created", data); err != nil {
+			if err := bus.Emit(context.Background(), eventstream.NewEvent("user.created", data)); err != nil {
 				log.Printf("Failed to emit event: %v", err)
 			} else {
 				fmt.Printf("Emitted event for user %d\n", i)

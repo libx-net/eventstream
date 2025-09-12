@@ -74,11 +74,12 @@ defer bus.Off(sub)
 
 4. 发布事件：
 ```go
-err = bus.Emit(context.Background(), "user.registered", map[string]interface{}{
+event := eventstream.NewEvent("user.registered", map[string]interface{}{
     "user_id": "u1",
     "email": "user@example.com",
-    "name": "Test User"
+    "name": "Test User",
 })
+err = bus.Emit(context.Background(), event)
 if err != nil {
     // 处理错误
 }

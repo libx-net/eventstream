@@ -62,7 +62,7 @@ func main() {
 			"name":    fmt.Sprintf("User %d", i),
 		}
 
-		if err := bus.Emit(ctx, "user.registered", userData); err != nil {
+		if err := bus.Emit(ctx, eventstream.NewEvent("user.registered", userData)); err != nil {
 			log.Printf("Failed to emit user.registered: %v", err)
 		}
 	}
@@ -76,7 +76,7 @@ func main() {
 			"items":    []string{"item1", "item2"},
 		}
 
-		if err := bus.Emit(ctx, "order.created", orderData); err != nil {
+		if err := bus.Emit(ctx, eventstream.NewEvent("order.created", orderData)); err != nil {
 			log.Printf("Failed to emit order.created: %v", err)
 		}
 	}

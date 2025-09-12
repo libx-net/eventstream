@@ -49,58 +49,6 @@ func TestEvent_UnmarshalEvent(t *testing.T) {
 	}
 }
 
-func TestDefaultEventSerializer_Serialize(t *testing.T) {
-	serializer := &DefaultEventSerializer{}
-	event := &Event{
-		ID:        "test-id",
-		Topic:     "test.topic",
-		Type:      "test.event",
-		Data:      "test data",
-		Timestamp: time.Now(),
-	}
-
-	data, err := serializer.Serialize(event)
-	if err != nil {
-		t.Fatalf("Failed to serialize event: %v", err)
-	}
-
-	if len(data) == 0 {
-		t.Error("Serialized data should not be empty")
-	}
-}
-
-func TestDefaultEventSerializer_Deserialize(t *testing.T) {
-	serializer := &DefaultEventSerializer{}
-
-	// 先序列化一个事件
-	originalEvent := &Event{
-		ID:        "test-id",
-		Topic:     "test.topic",
-		Type:      "test.event",
-		Data:      "test data",
-		Timestamp: time.Now(),
-	}
-
-	data, err := serializer.Serialize(originalEvent)
-	if err != nil {
-		t.Fatalf("Failed to serialize event: %v", err)
-	}
-
-	// 然后反序列化
-	deserializedEvent, err := serializer.Deserialize(data)
-	if err != nil {
-		t.Fatalf("Failed to deserialize event: %v", err)
-	}
-
-	if deserializedEvent.ID != originalEvent.ID {
-		t.Errorf("Expected ID '%s', got '%s'", originalEvent.ID, deserializedEvent.ID)
-	}
-
-	if deserializedEvent.Topic != originalEvent.Topic {
-		t.Errorf("Expected Topic '%s', got '%s'", originalEvent.Topic, deserializedEvent.Topic)
-	}
-}
-
 func TestEvent_WithHeader(t *testing.T) {
 	event := NewEvent("test.topic", "test data")
 

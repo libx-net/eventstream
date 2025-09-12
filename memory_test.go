@@ -49,7 +49,7 @@ func TestMemoryEventBus_WithHistory(t *testing.T) {
 	// 发布多个事件
 	ctx := context.Background()
 	for i := 0; i < 7; i++ {
-		err := bus.Emit(ctx, "test.topic", i)
+		err := bus.Emit(ctx, NewEvent("test.topic", i))
 		if err != nil {
 			t.Errorf("Failed to emit event %d: %v", i, err)
 		}
@@ -97,7 +97,7 @@ func TestMemoryEventBus_WithMetrics(t *testing.T) {
 	// 发布事件
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		err := bus.Emit(ctx, "test.metrics", i)
+		err := bus.Emit(ctx, NewEvent("test.metrics", i))
 		if err != nil {
 			t.Errorf("Failed to emit event %d: %v", i, err)
 		}
@@ -140,7 +140,7 @@ func TestMemoryEventBus_ErrorHandling(t *testing.T) {
 
 	// 测试空主题
 	ctx := context.Background()
-	err = bus.Emit(ctx, "", "data")
+	err = bus.Emit(ctx, NewEvent("", "data"))
 	if err == nil {
 		t.Error("Expected error for empty topic")
 	}
@@ -154,7 +154,7 @@ func TestMemoryEventBus_ErrorHandling(t *testing.T) {
 	// 关闭bus后测试
 	bus.Close()
 
-	err = bus.Emit(ctx, "test.topic", "data")
+	err = bus.Emit(ctx, NewEvent("test.topic", "data"))
 	if err == nil {
 		t.Error("Expected error when emitting to closed bus")
 	}
@@ -204,7 +204,7 @@ func TestMemoryEventBus_ConcurrentAccess(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			ctx := context.Background()
-			err := bus.Emit(ctx, "concurrent.test", i)
+			err := bus.Emit(ctx, NewEvent("concurrent.test", i))
 			if err != nil {
 				t.Errorf("Failed to emit event %d: %v", i, err)
 			}

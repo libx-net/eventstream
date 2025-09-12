@@ -42,7 +42,7 @@ func TestMemoryEventBus_Basic(t *testing.T) {
 
 	wg.Add(len(testData))
 	for _, data := range testData {
-		if err := bus.Emit(ctx, "test.event", data); err != nil {
+		if err := bus.Emit(ctx, NewEvent("test.event", data)); err != nil {
 			t.Errorf("Failed to emit event: %v", err)
 		}
 	}
@@ -118,7 +118,7 @@ func TestMemoryEventBus_MultipleSubscribers(t *testing.T) {
 
 	// 发布事件
 	ctx := context.Background()
-	if err := bus.Emit(ctx, "test.multi", "shared_event"); err != nil {
+	if err := bus.Emit(ctx, NewEvent("test.multi", "shared_event")); err != nil {
 		t.Errorf("Failed to emit event: %v", err)
 	}
 
@@ -182,7 +182,7 @@ func TestMemoryEventBus_WithRetry(t *testing.T) {
 
 	// 发布事件
 	ctx := context.Background()
-	if err := bus.Emit(ctx, "test.retry", "retry_test"); err != nil {
+	if err := bus.Emit(ctx, NewEvent("test.retry", "retry_test")); err != nil {
 		t.Errorf("Failed to emit event: %v", err)
 	}
 
@@ -232,7 +232,7 @@ func TestMemoryEventBus_Stats(t *testing.T) {
 	// 发布几个事件
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		if err := bus.Emit(ctx, "test.stats", i); err != nil {
+		if err := bus.Emit(ctx, NewEvent("test.stats", i)); err != nil {
 			t.Errorf("Failed to emit event %d: %v", i, err)
 		}
 	}
@@ -283,7 +283,7 @@ func TestMemoryEventBus_Close(t *testing.T) {
 
 	// 尝试发布事件应该失败
 	ctx := context.Background()
-	if err := bus.Emit(ctx, "test.close", "data"); err == nil {
+	if err := bus.Emit(ctx, NewEvent("test.close", "data")); err == nil {
 		t.Error("Expected error when emitting to closed eventbus")
 	}
 
@@ -326,7 +326,7 @@ func BenchmarkMemoryEventBus_Emit(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if err := bus.Emit(ctx, "bench.test", "data"); err != nil {
+			if err := bus.Emit(ctx, NewEvent("bench.test", "data")); err != nil {
 				b.Errorf("Emit failed: %v", err)
 			}
 		}
@@ -367,7 +367,7 @@ func BenchmarkMemoryEventBus_EmitAndProcess(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			if err := bus.Emit(ctx, "bench.process", "data"); err != nil {
+			if err := bus.Emit(ctx, NewEvent("bench.process", "data")); err != nil {
 				b.Errorf("Emit failed: %v", err)
 			}
 			processed++

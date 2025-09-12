@@ -7,33 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Distributed event streaming support with Kafka integration
-- Kafka adapter implementation with producer/consumer capabilities  
-- Comprehensive integration tests using Testcontainers
-- GitHub Actions workflow for CI testing
-- Makefile and test scripts for development
-- Documentation for distributed usage and testing
-- Refactored adapter, kafka, and internal packages into main package to eliminate circular imports
-- Added extensive unit tests for core modules (config, utils, memory, distributed, adapter, kafka)
-- Implemented distributed event bus main logic and subscription management in distributed.go
-- Added kafka_adapter.go with corresponding unit tests
-- Enhanced README and examples
+### Core Features
+- **Event Bus Architecture**: Unified EventBus interface supporting both memory-based and distributed event streaming
+- **Memory Event Bus**: High-performance in-memory event processing with consumer groups support
+- **Distributed Event Bus**: Scalable distributed event streaming with pluggable MQ adapter architecture
+- **Event Model**: Rich event structure with metadata support (ID, Type, Source, Headers, Version, Timestamp)
+- **Consumer Groups**: Independent consumer group processing with configurable retry policies and concurrency
+- **Subscription Management**: Flexible subscription lifecycle management with automatic cleanup
 
-### Changed
-- Unified Event type definitions and serialization logic
-- Simplified project package structure and import paths
-- Improved test coverage to 78.6%
+### MQ Adapters
+- **Kafka Adapter**: Production-ready Kafka integration with producer/consumer capabilities
+- **Pluggable Architecture**: Extensible MQAdapter interface for custom message queue implementations
+- **Message Abstraction**: Unified Message interface abstracting different MQ systems
 
-### Fixed
-- Fixed go test failures caused by refactoring (circular imports, type mismatches)
-- Fixed type conversion and field access errors in examples
+### Configuration & Options
+- **Flexible Configuration**: Comprehensive configuration system for both memory and distributed modes
+- **Subscription Options**: Rich subscription options including retry policies, concurrency control, and error handling
+- **Default Configurations**: Sensible defaults for quick setup and development
 
-### Changed
-- Consolidated packages: moved adapter, kafka, and internal code into main package to eliminate circular imports
-- Removed internal/memory/ directory structure
+### Testing & Quality
+- **Comprehensive Test Suite**: Extensive unit and integration tests with 78.6% coverage
+- **Integration Testing**: Testcontainers-based integration tests for Kafka adapter
+- **Benchmarks**: Performance benchmarks for critical paths
+- **CI/CD Pipeline**: GitHub Actions workflow for automated testing
 
-### Security
-- No security vulnerabilities identified in this release
+### Documentation & Examples
+- **Complete Documentation**: Detailed usage guides for memory and distributed modes
+- **Working Examples**: Ready-to-run examples for memory, Kafka, and custom adapter implementations
+- **API Documentation**: Comprehensive API documentation with code examples
+
+### Development Tools
+- **Makefile**: Development automation with test, build, and integration commands
+- **Scripts**: Helper scripts for testing and development workflow
+- **Docker Support**: Docker Compose setup for local Kafka testing
+
+### Architecture Highlights
+- **JSON Serialization**: Unified JSON-based event serialization across all components
+- **Concurrent Processing**: Thread-safe design with efficient concurrent event processing
+- **Error Handling**: Robust error handling with configurable retry mechanisms
+- **Metrics Support**: Built-in metrics collection for monitoring and observability
+- **Clean Package Structure**: Well-organized codebase with clear separation of concerns
 
 ---

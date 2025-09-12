@@ -2,7 +2,6 @@ package eventstream
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 )
 
@@ -44,28 +43,4 @@ type Message interface {
 
 	// Key 返回与消息关联的键。
 	Key() []byte
-}
-
-// EventSerializer 定义了在事件对象和字节切片之间进行序列化和反序列化的接口。
-type EventSerializer interface {
-	// Serialize 将事件对象编码为字节切片。
-	Serialize(event *Event) ([]byte, error)
-
-	// Deserialize 将字节切片解码为事件对象。
-	Deserialize(data []byte) (*Event, error)
-}
-
-// DefaultEventSerializer 是一个使用标准JSON进行序列化和反序列化的默认实现。
-type DefaultEventSerializer struct{}
-
-// Serialize 使用JSON编码事件。
-func (s *DefaultEventSerializer) Serialize(event *Event) ([]byte, error) {
-	return json.Marshal(event)
-}
-
-// Deserialize 使用JSON解码事件。
-func (s *DefaultEventSerializer) Deserialize(data []byte) (*Event, error) {
-	event := &Event{}
-	err := json.Unmarshal(data, event)
-	return event, err
 }

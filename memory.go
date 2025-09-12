@@ -53,18 +53,19 @@ func newMemoryEventBusImpl(config *Config) (EventBus, error) {
 }
 
 // Emit 发布事件
-func (eb *memoryEventBus) Emit(ctx context.Context, topic string, data interface{}) error {
+func (eb *memoryEventBus) Emit(ctx context.Context, event *Event) error {
 	if eb.isClosed() {
 		return fmt.Errorf("eventbus is closed")
 	}
 
-	// 验证主题
-	if err := validateTopic(topic); err != nil {
-		return err
+	if event == nil {
+		return fmt.Errorf("event cannot be nil")
 	}
 
-	// 创建事件
-	event := NewEvent(topic, data)
+	// 验证主题
+	if err := validateTopic(event.Topic); err != nil {
+		return err
+	}
 
 	// 添加到历史记录
 	if eb.history != nil {
@@ -73,11 +74,11 @@ func (eb *memoryEventBus) Emit(ctx context.Context, topic string, data interface
 
 	// 更新指标
 	if eb.metrics != nil {
-		eb.metrics.incEmitted(topic)
+		eb.metrics.incEmitted(event.Topic)
 	}
 
 	// 获取订阅者
-	subscribers := eb.subMgr.getSubscribers(topic)
+	subscribers := eb.subMgr.getSubscribers(event.Topic)
 	if len(subscribers) == 0 {
 		return nil // 没有订阅者
 	}

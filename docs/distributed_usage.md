@@ -13,7 +13,7 @@
 - EventBus：事件总线，负责发布与订阅事件。
 - MQAdapter：外部消息队列适配器，负责将事件发布到 MQ 以及从 MQ 订阅消息。
 - Subscription（订阅）：通过事件主题（topic）接收消息的注册句柄，可指定消费者组、并发数、重试策略等。
-- Serializer：事件序列化/反序列化器（默认 JSON）。
+- JSON 序列化：所有事件统一使用 JSON 进行序列化和反序列化。
 
 ---
 
@@ -42,15 +42,15 @@ Message 接口代表 MQ 的消息，需提供至少以下方法：Topic(), Value
 在构造 DistributedConfig 时，必须提供有效的 MQAdapter。常见字段：
 
 - Distributed.MQAdapter：MQAdapter 实例（必须）
-- Distributed.Serializer：序列化实现（可选，默认 JSON）
+- Distributed.EnableMetrics：是否启用指标收集（可选）
 - Pool / 性能相关参数：并发池大小等
 - Subscribe 默认选项：可通过订阅时覆盖
 
-示例（伪代码）：
+示例：
 ```go
 cfg := eventstream.DefaultDistributedConfig()
 cfg.Distributed.MQAdapter = myAdapter       // 必须
-cfg.Distributed.Serializer = mySerializer   // 可选，默认 JSON
+cfg.Distributed.EnableMetrics = true        // 可选，启用指标收集
 ```
 
 ---
@@ -106,7 +106,8 @@ defer bus.Off(sub)
 
 发布示例：
 ```go
-err := bus.Emit(context.Background(), "topic.name", payload)
+event := eventstream.NewEvent("topic.name", payload)
+err := bus.Emit(context.Background(), event)
 if err != nil {
     // 处理错误
 }
@@ -120,9 +121,10 @@ if err != nil {
 
 ---
 
-## 事件数据与序列化
+## 事件数据与 JSON 序列化
 
-- Event.Data 字段可能为序列化后的字节数组、字符串或已通过 Serializer 反序列化的对象，具体类型取决于所用 Serializer 与 Adapter。
+- 所有事件统一使用 JSON 进行序列化和反序列化。
+- Event.Data 字段在传输过程中会被序列化为 JSON 格式。
 - 推荐使用 Event.Unmarshal(dst) 将事件解码到目标结构，避免手动类型断言。
 
 示例：
@@ -161,7 +163,7 @@ defer bus.Close()
 ```
 
 注意：
-- Kafka Adapter 会在内部对消息做序列化，确保发布与订阅端使用相同的 Serializer。
+- Kafka Adapter 会在内部使用 JSON 对消息进行序列化，确保发布与订阅端格式一致。
 - Kafka 的消息 Key/Timestamp 等字段可由 Adapter 映射到 Message 接口。
 
 ---
@@ -210,9 +212,9 @@ func (s *SimpleMQAdapter) Close() error {
 
 ## 故障排查
 
-- 示例运行中出现类型断言错误（例如将 string 断言为 []byte），说明发布端和订阅端序列化格式不一致；检查使用的 Serializer 与实际传递的数据类型。
+- 示例运行中出现类型断言错误（例如将 string 断言为 []byte），说明发布端和订阅端数据类型不一致；检查传递的数据类型与接收端的类型断言。
 - 若出现 goroutine 泄漏，多半是 Subscribe 返回的通道或取消函数未正确关闭/调用。
-- 若消息丢失或重复，检查 MQAdapter 的 Ack/提交策略与序列化一致性。
+- 若消息丢失或重复，检查 MQAdapter 的 Ack/提交策略与 JSON 序列化一致性。
 
 ---
 
