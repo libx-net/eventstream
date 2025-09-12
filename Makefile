@@ -48,11 +48,18 @@ clean:
 benchmark:
 	go test -bench=. -benchmem ./...
 
-# 生成测试覆盖率报告（排除examples目录）
+# 生成测试覆盖率报告
 coverage:
-	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /examples/)
+	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+	@go tool cover -func=coverage.out | grep total
+
+# 生成 codecov 覆盖率报告
+coverage-codecov:
+	go test -coverprofile=coverage.out -covermode=atomic ./...
+	@echo "Coverage report for codecov generated: coverage.out"
+	@go tool cover -func=coverage.out | grep total
 
 # 运行竞态检测
 race:

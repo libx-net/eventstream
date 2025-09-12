@@ -7,9 +7,22 @@ coverage:
   range: "70...100"
 
   status:
-    project: yes
-    patch: yes
+    project:
+      default:
+        target: 70%
+        threshold: 1%
+    patch:
+      default:
+        target: 70%
+        threshold: 1%
     changes: no
+
+ignore:
+  - "examples/**/*"
+  - "scripts/**/*"
+  - "docs/**/*"
+  - "**/*_test.go"
+  - "*.md"
 
 parsers:
   gcov:
