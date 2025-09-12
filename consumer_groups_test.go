@@ -22,30 +22,30 @@ func TestConsumerGroups_MultipleGroupsSameEvent(t *testing.T) {
 	results := make(map[string][]string)
 
 	// 消费者组1: 通知服务
-	_, err = bus.On("user.registered", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("user.registered", "notification-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		results["notification-service"] = append(results["notification-service"], event.ID)
 		return nil
-	}, WithConsumerGroup("notification-service"))
+	})
 	require.NoError(t, err)
 
 	// 消费者组2: 积分服务
-	_, err = bus.On("user.registered", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("user.registered", "points-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		results["points-service"] = append(results["points-service"], event.ID)
 		return nil
-	}, WithConsumerGroup("points-service"))
+	})
 	require.NoError(t, err)
 
 	// 消费者组3: 分析服务
-	_, err = bus.On("user.registered", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("user.registered", "analytics-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		results["analytics-service"] = append(results["analytics-service"], event.ID)
 		return nil
-	}, WithConsumerGroup("analytics-service"))
+	})
 	require.NoError(t, err)
 
 	// 发布事件
@@ -83,13 +83,12 @@ func TestConsumerGroups_DifferentConfigurations(t *testing.T) {
 	processedEvents := make(map[string]int)
 
 	// 高可靠性消费者组 - 多次重试
-	_, err = bus.On("order.created", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("order.created", "reliable-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		processedEvents["reliable-service"]++
 		return nil
 	},
-		WithConsumerGroup("reliable-service"),
 		WithRetryPolicy(&RetryPolicy{
 			MaxRetries:      5,
 			BackoffStrategy: "exponential",
@@ -100,13 +99,12 @@ func TestConsumerGroups_DifferentConfigurations(t *testing.T) {
 	require.NoError(t, err)
 
 	// 快速处理消费者组 - 少量重试
-	_, err = bus.On("order.created", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("order.created", "fast-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		processedEvents["fast-service"]++
 		return nil
 	},
-		WithConsumerGroup("fast-service"),
 		WithRetryPolicy(&RetryPolicy{
 			MaxRetries:      1,
 			BackoffStrategy: "fixed",
@@ -148,22 +146,21 @@ func TestConsumerGroups_IndependentFailures(t *testing.T) {
 	failureCount := 0
 
 	// 成功的消费者组
-	_, err = bus.On("test.event", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.event", "success-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		successCount++
 		return nil
-	}, WithConsumerGroup("success-service"))
+	})
 	require.NoError(t, err)
 
 	// 失败的消费者组
-	_, err = bus.On("test.event", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.event", "failure-service", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		failureCount++
 		return assert.AnError // 模拟处理失败
 	},
-		WithConsumerGroup("failure-service"),
 		WithRetryPolicy(&RetryPolicy{
 			MaxRetries:   1,
 			InitialDelay: 10 * time.Millisecond,
@@ -201,14 +198,14 @@ func TestConsumerGroups_Statistics(t *testing.T) {
 	require.True(t, ok, "应该是内存模式EventBus")
 
 	// 创建多个消费者组
-	_, err = bus.On("stats.test", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("stats.test", "service-a", func(ctx context.Context, event *Event) error {
 		return nil
-	}, WithConsumerGroup("service-a"))
+	})
 	require.NoError(t, err)
 
-	_, err = bus.On("stats.test", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("stats.test", "service-b", func(ctx context.Context, event *Event) error {
 		return nil
-	}, WithConsumerGroup("service-b"))
+	})
 	require.NoError(t, err)
 
 	// 发布事件
@@ -245,11 +242,11 @@ func BenchmarkConsumerGroups_MultipleGroups(b *testing.B) {
 	// 创建5个消费者组
 	for i := 0; i < 5; i++ {
 		groupName := fmt.Sprintf("service-%d", i)
-		_, err = bus.On("benchmark.event", func(ctx context.Context, event *Event) error {
+		_, err = bus.On("benchmark.event", groupName, func(ctx context.Context, event *Event) error {
 			// 模拟一些处理时间
 			time.Sleep(time.Microsecond)
 			return nil
-		}, WithConsumerGroup(groupName))
+		})
 		require.NoError(b, err)
 	}
 

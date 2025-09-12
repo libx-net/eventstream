@@ -91,7 +91,7 @@ func (eb *memoryEventBus) Emit(ctx context.Context, topic string, data interface
 }
 
 // On 订阅事件
-func (eb *memoryEventBus) On(topic string, handler EventHandler, opts ...SubscribeOption) (Subscription, error) {
+func (eb *memoryEventBus) On(topic string, group string, handler EventHandler, opts ...SubscribeOption) (Subscription, error) {
 	if eb.isClosed() {
 		return nil, fmt.Errorf("eventbus is closed")
 	}

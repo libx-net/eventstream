@@ -9,6 +9,23 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// KafkaWriter 定义了 kafka.Writer 的接口，以便于模拟。
+type KafkaWriter interface {
+	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
+	Close() error
+}
+
+// KafkaReader 定义了 kafka.Reader 的接口，以便于模拟。
+type KafkaReader interface {
+	FetchMessage(ctx context.Context) (kafka.Message, error)
+	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
+	Close() error
+}
+
+// 确保真实类型实现了接口。
+var _ KafkaWriter = (*kafka.Writer)(nil)
+var _ KafkaReader = (*kafka.Reader)(nil)
+
 // KafkaConfig 保存所有 Kafka 特定的配置。
 type KafkaConfig struct {
 	Brokers  []string
@@ -35,10 +52,11 @@ type KafkaConsumerConfig struct {
 
 // KafkaAdapter 是用于 Apache Kafka 的 MQAdapter 实现。
 type KafkaAdapter struct {
-	config   KafkaConfig
-	producer *kafka.Writer
-	readers  map[string]*kafka.Reader // 每个消费者组一个 reader
-	mu       sync.Mutex
+	config        KafkaConfig
+	producer      KafkaWriter
+	readers       map[string]KafkaReader // 每个消费者组一个 reader
+	mu            sync.Mutex
+	newReaderFunc func(kafka.ReaderConfig) KafkaReader
 }
 
 // NewKafkaAdapter 创建一个新的 Kafka 适配器。
@@ -55,11 +73,16 @@ func NewKafkaAdapter(config KafkaConfig) (*KafkaAdapter, error) {
 		RequiredAcks: kafka.RequiredAcks(config.Producer.RequiredAcks),
 	}
 
-	return &KafkaAdapter{
+	adapter := &KafkaAdapter{
 		config:   config,
 		producer: producer,
-		readers:  make(map[string]*kafka.Reader),
-	}, nil
+		readers:  make(map[string]KafkaReader),
+	}
+	adapter.newReaderFunc = func(cfg kafka.ReaderConfig) KafkaReader {
+		return kafka.NewReader(cfg)
+	}
+
+	return adapter, nil
 }
 
 // Publish 实现 MQAdapter 接口。
@@ -78,7 +101,7 @@ func (a *KafkaAdapter) Subscribe(ctx context.Context, topic, groupID string) (<-
 	readerKey := fmt.Sprintf("%s-%s", topic, groupID)
 	reader, exists := a.readers[readerKey]
 	if !exists {
-		reader = kafka.NewReader(kafka.ReaderConfig{
+		reader = a.newReaderFunc(kafka.ReaderConfig{
 			Brokers:        a.config.Brokers,
 			Topic:          topic,
 			GroupID:        groupID,

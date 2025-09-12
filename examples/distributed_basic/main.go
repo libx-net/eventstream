@@ -22,14 +22,14 @@ func NewSimpleMQAdapter() *SimpleMQAdapter {
 	}
 }
 
-func (s *SimpleMQAdapter) Publish(ctx context.Context, topic string, message []byte) error {
+func (s *SimpleMQAdapter) Publish(ctx context.Context, topic string, payload []byte) error {
 	s.mu.RLock()
 	channels := s.messages[topic]
 	s.mu.RUnlock()
 
 	for _, ch := range channels {
 		select {
-		case ch <- message:
+		case ch <- payload:
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
@@ -100,10 +100,10 @@ func main() {
 	defer eventBus.Close()
 
 	// 订阅事件
-	subscription, err := eventBus.On("test.topic", func(ctx context.Context, event *eventstream.Event) error {
+	subscription, err := eventBus.On("test.topic", "test-group", func(ctx context.Context, event *eventstream.Event) error {
 		fmt.Printf("Received event: %s - %v\n", event.Topic, event.Data)
 		return nil
-	}, eventstream.WithConsumerGroup("test-group"))
+	})
 	if err != nil {
 		log.Fatalf("Failed to subscribe: %v", err)
 	}

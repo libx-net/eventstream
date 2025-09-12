@@ -85,7 +85,7 @@ func TestMemoryEventBus_WithMetrics(t *testing.T) {
 	memBus := bus.(*memoryEventBus)
 
 	// 订阅事件
-	_, err = bus.On("test.metrics", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.metrics", "test-group", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ func TestMemoryEventBus_ErrorHandling(t *testing.T) {
 	}
 
 	// 测试nil handler
-	_, err = bus.On("test.topic", nil)
+	_, err = bus.On("test.topic", "test-group", nil)
 	if err == nil {
 		t.Error("Expected error for nil handler")
 	}
@@ -159,7 +159,7 @@ func TestMemoryEventBus_ErrorHandling(t *testing.T) {
 		t.Error("Expected error when emitting to closed bus")
 	}
 
-	_, err = bus.On("test.topic", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.topic", "test-group", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err == nil {
@@ -183,7 +183,7 @@ func TestMemoryEventBus_ConcurrentAccess(t *testing.T) {
 
 	// 创建多个订阅者
 	for i := 0; i < 5; i++ {
-		_, err := bus.On("concurrent.test", func(ctx context.Context, event *Event) error {
+		_, err := bus.On("concurrent.test", "test-group", func(ctx context.Context, event *Event) error {
 			mu.Lock()
 			receivedCount++
 			mu.Unlock()
@@ -231,7 +231,7 @@ func TestMemorySubscription_Interface(t *testing.T) {
 	}
 	defer bus.Close()
 
-	sub, err := bus.On("test.subscription", func(ctx context.Context, event *Event) error {
+	sub, err := bus.On("test.subscription", "test-group", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err != nil {

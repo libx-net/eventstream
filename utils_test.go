@@ -156,16 +156,11 @@ func TestValidateTopic(t *testing.T) {
 
 func TestMergeSubscribeOptions(t *testing.T) {
 	opts := []SubscribeOption{
-		WithConsumerGroup("test-group"),
 		WithConcurrency(5),
 		WithBufferSize(200),
 	}
 
 	config := mergeSubscribeOptions(opts)
-
-	if config.ConsumerGroup != "test-group" {
-		t.Errorf("Expected consumer group 'test-group', got '%s'", config.ConsumerGroup)
-	}
 
 	if config.Concurrency != 5 {
 		t.Errorf("Expected concurrency 5, got %d", config.Concurrency)

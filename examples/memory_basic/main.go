@@ -26,13 +26,14 @@ func main() {
 	fmt.Println("===============================")
 
 	// 订阅用户注册事件
-	subscription1, err := bus.On("user.registered", handleUserRegistered)
+	subscription1, err := bus.On("user.registered", "user-group", handleUserRegistered)
 	if err != nil {
 		log.Fatal("Failed to subscribe to user.registered:", err)
 	}
 
 	// 订阅订单创建事件，带重试策略
 	subscription2, err := bus.On("order.created",
+		"order-group",
 		handleOrderCreated,
 		eventstream.WithConcurrency(2),
 		eventstream.WithRetryPolicy(&eventstream.RetryPolicy{

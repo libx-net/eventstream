@@ -32,6 +32,7 @@ func main() {
 	// 处理用户注册事件，发送欢迎邮件
 	wg.Add(1)
 	subscription1, err := bus.On("user.registered",
+		"notification-service",
 		func(ctx context.Context, event *eventstream.Event) error {
 			defer wg.Done()
 			var userData struct {
@@ -48,7 +49,6 @@ func main() {
 			time.Sleep(50 * time.Millisecond) // 模拟邮件发送
 			return nil
 		},
-		eventstream.WithConsumerGroup("notification-service"),
 		eventstream.WithConcurrency(1),
 	)
 	if err != nil {
@@ -59,6 +59,7 @@ func main() {
 	// 处理同样的用户注册事件，进行数据分析
 	wg.Add(1)
 	subscription2, err := bus.On("user.registered",
+		"analytics-service",
 		func(ctx context.Context, event *eventstream.Event) error {
 			defer wg.Done()
 			var userData struct {
@@ -75,7 +76,6 @@ func main() {
 			time.Sleep(30 * time.Millisecond) // 模拟数据处理
 			return nil
 		},
-		eventstream.WithConsumerGroup("analytics-service"),
 		eventstream.WithConcurrency(2),
 	)
 	if err != nil {
@@ -86,6 +86,7 @@ func main() {
 	// 处理同样的用户注册事件，给新用户发放积分
 	wg.Add(1)
 	subscription3, err := bus.On("user.registered",
+		"points-service",
 		func(ctx context.Context, event *eventstream.Event) error {
 			defer wg.Done()
 			var userData struct {
@@ -102,7 +103,6 @@ func main() {
 			time.Sleep(20 * time.Millisecond) // 模拟积分发放
 			return nil
 		},
-		eventstream.WithConsumerGroup("points-service"),
 		eventstream.WithConcurrency(1),
 		eventstream.WithRetryPolicy(&eventstream.RetryPolicy{
 			MaxRetries:      2,
@@ -156,12 +156,12 @@ func main() {
 	var orderWg sync.WaitGroup
 	orderWg.Add(1)
 	orderSub, err := bus.On("order.created",
+		"order-service",
 		func(ctx context.Context, event *eventstream.Event) error {
 			defer orderWg.Done()
 			fmt.Printf("📦 [订单服务] 处理订单创建: %v\n", event.Data)
 			return nil
 		},
-		eventstream.WithConsumerGroup("order-service"),
 	)
 	if err != nil {
 		log.Fatal("Failed to subscribe order service:", err)
@@ -170,12 +170,12 @@ func main() {
 	// 库存服务也关心订单事件
 	orderWg.Add(1)
 	inventorySub, err := bus.On("order.created",
+		"inventory-service",
 		func(ctx context.Context, event *eventstream.Event) error {
 			defer orderWg.Done()
 			fmt.Printf("📋 [库存服务] 更新库存: %v\n", event.Data)
 			return nil
 		},
-		eventstream.WithConsumerGroup("inventory-service"),
 	)
 	if err != nil {
 		log.Fatal("Failed to subscribe inventory service:", err)

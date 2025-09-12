@@ -95,7 +95,7 @@ func (eb *DistributedEventBus) Emit(ctx context.Context, topic string, data inte
 }
 
 // On 订阅事件
-func (eb *DistributedEventBus) On(topic string, handler EventHandler, opts ...SubscribeOption) (Subscription, error) {
+func (eb *DistributedEventBus) On(topic string, group string, handler EventHandler, opts ...SubscribeOption) (Subscription, error) {
 	if eb.isClosed() {
 		return nil, fmt.Errorf("eventbus is closed")
 	}
@@ -104,12 +104,16 @@ func (eb *DistributedEventBus) On(topic string, handler EventHandler, opts ...Su
 	if err := validateTopic(topic); err != nil {
 		return nil, err
 	}
+	if group == "" {
+		return nil, fmt.Errorf("consumer group cannot be empty")
+	}
 	if handler == nil {
 		return nil, fmt.Errorf("handler cannot be nil")
 	}
 
 	// 合并订阅选项
 	config := mergeSubscribeOptions(opts)
+	config.ConsumerGroup = group
 
 	// 创建订阅
 	sub := newDistributedSubscription(topic, handler, config, eb.adapter, eb.serializer, eb.pool)

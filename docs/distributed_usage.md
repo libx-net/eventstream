@@ -79,6 +79,7 @@ New 会根据配置创建分布式的 EventBus 实例。
 ```go
 sub, err := bus.On(
     "topic.name",
+    "group-1", // 消费组现在是必需参数
     func(ctx context.Context, e *eventstream.Event) error {
         // 处理消息
         var payload MyStruct
@@ -88,7 +89,6 @@ sub, err := bus.On(
         // 业务处理
         return nil
     },
-    eventstream.WithConsumerGroup("group-1"),
     eventstream.WithConcurrency(4),
     eventstream.WithRetryPolicy(&eventstream.RetryPolicy{
         MaxRetries:      3,
@@ -113,9 +113,10 @@ if err != nil {
 ```
 
 说明：
-- Subscribe/On 返回的 Subscription 可用于取消订阅（bus.Off(sub)）。
-- 订阅时可通过选项指定消费组、并发数、缓冲大小与重试策略等。
-- 回调签名为 func(ctx context.Context, e *eventstream.Event) error。
+- `On` 方法现在要求提供一个消费组（`group`）作为必需参数。
+- `On` 方法返回的 `Subscription` 可用于取消订阅（`bus.Off(sub)`）。
+- 订阅时可通过选项指定并发数、缓冲大小与重试策略等。
+- 回调签名为 `func(ctx context.Context, e *eventstream.Event) error`。
 
 ---
 

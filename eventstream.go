@@ -13,7 +13,7 @@ type EventBus interface {
 	Emit(ctx context.Context, topic string, data interface{}) error
 
 	// On 订阅事件
-	On(topic string, handler EventHandler, opts ...SubscribeOption) (Subscription, error)
+	On(topic string, group string, handler EventHandler, opts ...SubscribeOption) (Subscription, error)
 
 	// Off 取消订阅
 	Off(subscription Subscription) error
@@ -73,13 +73,6 @@ func New(config *Config) (EventBus, error) {
 		return newDistributedEventBus(config)
 	default:
 		return nil, fmt.Errorf("unsupported mode: %s", config.Mode)
-	}
-}
-
-// WithConsumerGroup 设置消费者组
-func WithConsumerGroup(group string) SubscribeOption {
-	return func(config *SubscribeConfig) {
-		config.ConsumerGroup = group
 	}
 }
 

@@ -22,7 +22,7 @@ func TestMemoryEventBus_Basic(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 订阅事件
-	subscription, err := bus.On("test.event", func(ctx context.Context, event *Event) error {
+	subscription, err := bus.On("test.event", "test-group", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		receivedEvents = append(receivedEvents, event.Data.(string))
@@ -93,7 +93,7 @@ func TestMemoryEventBus_MultipleSubscribers(t *testing.T) {
 	var mu1, mu2 sync.Mutex
 
 	// 第一个订阅者
-	sub1, err := bus.On("test.multi", func(ctx context.Context, event *Event) error {
+	sub1, err := bus.On("test.multi", "group1", func(ctx context.Context, event *Event) error {
 		mu1.Lock()
 		defer mu1.Unlock()
 		received1 = append(received1, event.Data.(string))
@@ -104,7 +104,7 @@ func TestMemoryEventBus_MultipleSubscribers(t *testing.T) {
 	}
 
 	// 第二个订阅者
-	sub2, err := bus.On("test.multi", func(ctx context.Context, event *Event) error {
+	sub2, err := bus.On("test.multi", "group2", func(ctx context.Context, event *Event) error {
 		mu2.Lock()
 		defer mu2.Unlock()
 		received2 = append(received2, event.Data.(string))
@@ -155,7 +155,7 @@ func TestMemoryEventBus_WithRetry(t *testing.T) {
 	var mu sync.Mutex
 
 	// 订阅事件，前两次失败，第三次成功
-	subscription, err := bus.On("test.retry", func(ctx context.Context, event *Event) error {
+	subscription, err := bus.On("test.retry", "retry-group", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		attempts++
@@ -214,7 +214,7 @@ func TestMemoryEventBus_Stats(t *testing.T) {
 	}
 
 	// 订阅事件
-	subscription, err := bus.On("test.stats", func(ctx context.Context, event *Event) error {
+	subscription, err := bus.On("test.stats", "stats-group", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err != nil {
@@ -261,7 +261,7 @@ func TestMemoryEventBus_Close(t *testing.T) {
 	}
 
 	// 订阅事件
-	subscription, err := bus.On("test.close", func(ctx context.Context, event *Event) error {
+	subscription, err := bus.On("test.close", "close-group", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err != nil {
@@ -280,7 +280,7 @@ func TestMemoryEventBus_Close(t *testing.T) {
 	}
 
 	// 尝试订阅应该失败
-	_, err = bus.On("test.close2", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.close2", "close-group2", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err == nil {
@@ -336,7 +336,7 @@ func BenchmarkMemoryEventBus_EmitAndProcess(b *testing.B) {
 
 	// 订阅事件
 	var processed int64
-	bus.On("bench.process", func(ctx context.Context, event *Event) error {
+	bus.On("bench.process", "bench-group", func(ctx context.Context, event *Event) error {
 		// 模拟一些处理
 		_ = event.Data
 		return nil

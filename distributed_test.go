@@ -66,13 +66,13 @@ func TestDistributedEventBus_EmitAndSubscribe(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// 订阅事件
-	_, err = bus.On("test.distributed", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.distributed", "test-group", func(ctx context.Context, event *Event) error {
 		mu.Lock()
 		defer mu.Unlock()
 		receivedEvents = append(receivedEvents, event.Data.(string))
 		wg.Done()
 		return nil
-	}, WithConsumerGroup("test-group"))
+	})
 	if err != nil {
 		t.Fatalf("Failed to subscribe: %v", err)
 	}
@@ -117,9 +117,17 @@ func TestDistributedEventBus_ErrorHandling(t *testing.T) {
 	}
 
 	// 测试nil handler
-	_, err = bus.On("test.topic", nil)
+	_, err = bus.On("test.topic", "test-group", nil)
 	if err == nil {
 		t.Error("Expected error for nil handler")
+	}
+
+	// 测试空 group
+	_, err = bus.On("test.topic", "", func(ctx context.Context, event *Event) error {
+		return nil
+	})
+	if err == nil {
+		t.Error("Expected error for empty group")
 	}
 
 	// 关闭bus后测试
@@ -130,7 +138,7 @@ func TestDistributedEventBus_ErrorHandling(t *testing.T) {
 		t.Error("Expected error when emitting to closed bus")
 	}
 
-	_, err = bus.On("test.topic", func(ctx context.Context, event *Event) error {
+	_, err = bus.On("test.topic", "test-group", func(ctx context.Context, event *Event) error {
 		return nil
 	})
 	if err == nil {
@@ -239,7 +247,7 @@ type mockDistributedMQAdapter struct {
 	mu       sync.RWMutex
 }
 
-func (m *mockDistributedMQAdapter) Publish(ctx context.Context, topic string, message []byte) error {
+func (m *mockDistributedMQAdapter) Publish(ctx context.Context, topic string, payload []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -249,7 +257,7 @@ func (m *mockDistributedMQAdapter) Publish(ctx context.Context, topic string, me
 
 	msg := &mockMessage{
 		topic:     topic,
-		value:     message,
+		value:     payload,
 		timestamp: time.Now(),
 	}
 
