@@ -19,7 +19,6 @@ type DistributedEventBus struct {
 	metrics    *distributedEventMetrics
 	closed     int32
 	closeCh    chan struct{}
-	mu         sync.RWMutex
 }
 
 // NewDistributedEventBus 创建分布式模式事件总线
@@ -259,7 +258,6 @@ type distributedSubscription struct {
 	msgChan    <-chan Message
 	closeFunc  func()
 	closed     int32
-	mu         sync.RWMutex
 }
 
 func newDistributedSubscription(topic string, handler EventHandler, config *SubscribeConfig, adapter MQAdapter, serializer EventSerializer, pool *ants.Pool) *distributedSubscription {
@@ -313,9 +311,11 @@ func (s *distributedSubscription) processMessages(ctx context.Context) {
 		}
 
 		// 异步处理事件
-		s.pool.Submit(func() {
+		if err := s.pool.Submit(func() {
 			s.handleEvent(ctx, event, msg)
-		})
+		}); err != nil {
+			fmt.Printf("Failed to submit event processing task: %v\n", err)
+		}
 	}
 }
 

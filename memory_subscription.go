@@ -52,10 +52,13 @@ func (s *memorySubscription) start(ctx context.Context, pool PoolSubmitter) {
 	// 启动事件处理协程
 	for i := 0; i < s.config.Concurrency; i++ {
 		s.wg.Add(1)
-		pool.Submit(func() {
+		if err := pool.Submit(func() {
 			defer s.wg.Done()
 			s.processEvents(ctx)
-		})
+		}); err != nil {
+			s.wg.Done()
+			// 记录错误或忽略，取决于具体需求
+		}
 	}
 }
 
@@ -117,6 +120,7 @@ func (s *memorySubscription) handleEvent(ctx context.Context, event *Event) {
 			case <-s.stopCh:
 				return
 			case <-time.After(delay):
+				// 定时器触发，继续执行重试
 			}
 		}
 
@@ -130,6 +134,7 @@ func (s *memorySubscription) handleEvent(ctx context.Context, event *Event) {
 		// TODO: 使用结构化日志
 		if attempt < s.config.RetryPolicy.MaxRetries {
 			// log.Printf("Event processing attempt %d failed: %v", attempt+1, err)
+			_ = err // 避免空分支警告
 		}
 	}
 

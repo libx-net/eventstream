@@ -139,8 +139,12 @@ func TestMemoryEventBus_MultipleSubscribers(t *testing.T) {
 	}
 
 	// 清理
-	bus.Off(sub1)
-	bus.Off(sub2)
+	if err := bus.Off(sub1); err != nil {
+		t.Errorf("Failed to unsubscribe: %v", err)
+	}
+	if err := bus.Off(sub2); err != nil {
+		t.Errorf("Failed to unsubscribe: %v", err)
+	}
 }
 
 func TestMemoryEventBus_WithRetry(t *testing.T) {
@@ -193,7 +197,9 @@ func TestMemoryEventBus_WithRetry(t *testing.T) {
 		t.Errorf("Expected 3 attempts, got %d", attempts)
 	}
 
-	bus.Off(subscription)
+	if err := bus.Off(subscription); err != nil {
+		t.Errorf("Failed to unsubscribe: %v", err)
+	}
 }
 
 func TestMemoryEventBus_Stats(t *testing.T) {
@@ -250,7 +256,9 @@ func TestMemoryEventBus_Stats(t *testing.T) {
 		t.Errorf("Expected 3 events in history, got %d", len(history))
 	}
 
-	bus.Off(subscription)
+	if err := bus.Off(subscription); err != nil {
+		t.Errorf("Failed to unsubscribe: %v", err)
+	}
 }
 
 func TestMemoryEventBus_Close(t *testing.T) {
@@ -318,7 +326,9 @@ func BenchmarkMemoryEventBus_Emit(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			bus.Emit(ctx, "bench.test", "data")
+			if err := bus.Emit(ctx, "bench.test", "data"); err != nil {
+				b.Errorf("Emit failed: %v", err)
+			}
 		}
 	})
 }
@@ -336,11 +346,19 @@ func BenchmarkMemoryEventBus_EmitAndProcess(b *testing.B) {
 
 	// 订阅事件
 	var processed int64
-	bus.On("bench.process", "bench-group", func(ctx context.Context, event *Event) error {
+	subscription, err := bus.On("bench.process", "bench-group", func(ctx context.Context, event *Event) error {
 		// 模拟一些处理
 		_ = event.Data
 		return nil
 	})
+	if err != nil {
+		b.Fatalf("On failed: %v", err)
+	}
+	defer func() {
+		if err := bus.Off(subscription); err != nil {
+			b.Errorf("Off failed: %v", err)
+		}
+	}()
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -349,7 +367,9 @@ func BenchmarkMemoryEventBus_EmitAndProcess(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			bus.Emit(ctx, "bench.process", "data")
+			if err := bus.Emit(ctx, "bench.process", "data"); err != nil {
+				b.Errorf("Emit failed: %v", err)
+			}
 			processed++
 		}
 	})

@@ -3,7 +3,6 @@ package eventstream
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 
 	"github.com/panjf2000/ants/v2"
@@ -18,7 +17,6 @@ type memoryEventBus struct {
 	metrics *eventMetrics
 	closed  int32
 	closeCh chan struct{}
-	mu      sync.RWMutex
 }
 
 // newMemoryEventBusImpl 创建内存模式事件总线实现
@@ -85,9 +83,12 @@ func (eb *memoryEventBus) Emit(ctx context.Context, topic string, data interface
 	}
 
 	// 异步投递事件到所有订阅者
-	return eb.pool.Submit(func() {
+	if err := eb.pool.Submit(func() {
 		eb.deliverEvent(event, subscribers)
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to submit event delivery task: %w", err)
+	}
+	return nil
 }
 
 // On 订阅事件
