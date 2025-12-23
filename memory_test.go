@@ -13,7 +13,9 @@ func TestMemoryEventBus_Creation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	memBus, ok := bus.(*memoryEventBus)
 	if !ok {
@@ -42,7 +44,9 @@ func TestMemoryEventBus_WithHistory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	memBus := bus.(*memoryEventBus)
 
@@ -80,7 +84,9 @@ func TestMemoryEventBus_WithMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	memBus := bus.(*memoryEventBus)
 
@@ -152,7 +158,7 @@ func TestMemoryEventBus_ErrorHandling(t *testing.T) {
 	}
 
 	// 关闭bus后测试
-	bus.Close()
+	_ = bus.Close()
 
 	err = bus.Emit(ctx, NewEvent("test.topic", "data"))
 	if err == nil {
@@ -175,7 +181,9 @@ func TestMemoryEventBus_ConcurrentAccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	var wg sync.WaitGroup
 	var receivedCount int64
@@ -229,7 +237,9 @@ func TestMemorySubscription_Interface(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	sub, err := bus.On("test.subscription", "test-group", func(ctx context.Context, event *Event) error {
 		return nil

@@ -19,7 +19,9 @@ func TestDistributedEventBus_Creation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create distributed event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	if bus.config != config {
 		t.Error("Config should be set correctly")
@@ -60,7 +62,9 @@ func TestDistributedEventBus_EmitAndSubscribe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create distributed event bus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	var receivedEvents []string
 	var mu sync.Mutex
@@ -132,7 +136,7 @@ func TestDistributedEventBus_ErrorHandling(t *testing.T) {
 	}
 
 	// 关闭bus后测试
-	bus.Close()
+	_ = bus.Close()
 
 	err = bus.Emit(ctx, NewEvent("test.topic", "data"))
 	if err == nil {
@@ -248,7 +252,7 @@ type mockDistributedMQAdapter struct {
 	mu       sync.RWMutex
 }
 
-func (m *mockDistributedMQAdapter) Publish(ctx context.Context, topic string, payload []byte) error {
+func (m *mockDistributedMQAdapter) Publish(_ context.Context, topic string, payload []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -278,7 +282,7 @@ func (m *mockDistributedMQAdapter) Publish(ctx context.Context, topic string, pa
 	return nil
 }
 
-func (m *mockDistributedMQAdapter) Subscribe(ctx context.Context, topic, groupID string) (<-chan Message, func(), error) {
+func (m *mockDistributedMQAdapter) Subscribe(_ context.Context, topic, _ string) (<-chan Message, func(), error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -307,7 +311,7 @@ func (m *mockDistributedMQAdapter) Subscribe(ctx context.Context, topic, groupID
 	return ch, closeFunc, nil
 }
 
-func (m *mockDistributedMQAdapter) Ack(ctx context.Context, groupID string, msg Message) error {
+func (m *mockDistributedMQAdapter) Ack(_ context.Context, _ string, _ Message) error {
 	return nil
 }
 
@@ -344,7 +348,9 @@ func TestConsumerGroups_MultipleGroupsSameEvent(t *testing.T) {
 	config := DefaultConfig()
 	bus, err := New(config)
 	require.NoError(t, err)
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	// 用于收集不同消费者组的处理结果
 	var mu sync.Mutex
@@ -406,7 +412,9 @@ func TestConsumerGroups_DifferentConfigurations(t *testing.T) {
 	config := DefaultConfig()
 	bus, err := New(config)
 	require.NoError(t, err)
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	var mu sync.Mutex
 	processedEvents := make(map[string]int)
@@ -468,7 +476,9 @@ func TestConsumerGroups_IndependentFailures(t *testing.T) {
 	config := DefaultConfig()
 	bus, err := New(config)
 	require.NoError(t, err)
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	var mu sync.Mutex
 	successCount := 0
@@ -521,7 +531,9 @@ func TestConsumerGroups_Statistics(t *testing.T) {
 	config := DefaultConfig()
 	bus, err := New(config)
 	require.NoError(t, err)
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	memBus, ok := bus.(MemoryEventBus)
 	require.True(t, ok, "应该是内存模式EventBus")
@@ -566,7 +578,9 @@ func BenchmarkConsumerGroups_MultipleGroups(b *testing.B) {
 	config := DefaultConfig()
 	bus, err := New(config)
 	require.NoError(b, err)
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	// 创建5个消费者组
 	for i := 0; i < 5; i++ {

@@ -14,7 +14,9 @@ func TestMemoryEventBus_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create eventbus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	// 测试数据
 	var receivedEvents []string
@@ -87,7 +89,9 @@ func TestMemoryEventBus_MultipleSubscribers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create eventbus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	var received1, received2 []string
 	var mu1, mu2 sync.Mutex
@@ -153,7 +157,9 @@ func TestMemoryEventBus_WithRetry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create eventbus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	var attempts int
 	var mu sync.Mutex
@@ -211,7 +217,9 @@ func TestMemoryEventBus_Stats(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create eventbus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	// 类型断言到MemoryEventBus
 	memBus, ok := bus.(MemoryEventBus)
@@ -319,7 +327,9 @@ func BenchmarkMemoryEventBus_Emit(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create eventbus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	ctx := context.Background()
 
@@ -342,7 +352,9 @@ func BenchmarkMemoryEventBus_EmitAndProcess(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create eventbus: %v", err)
 	}
-	defer bus.Close()
+	defer func() {
+		_ = bus.Close()
+	}()
 
 	// 订阅事件
 	var processed int64

@@ -21,17 +21,57 @@ import (
 	eventstream "libx.net/eventstream"
 )
 
-// isContainerRuntimeAvailable 检查容器运行时是否可用
+// isContainerRuntimeAvailable checks whether a container runtime (docker or podman) is available.
+// Priority:
+// 1) If CONTAINER_RUNTIME env is set, try that runtime.
+// 2) Try docker info.
+// 3) Try podman info.
+// 4) As a fallback for podman-machine scenarios, try `podman system connection list`.
 func isContainerRuntimeAvailable() bool {
-	// 检查Docker
+	// If Makefile or caller sets CONTAINER_RUNTIME, prefer it.
+	if rt := os.Getenv("CONTAINER_RUNTIME"); rt != "" {
+		cmd := exec.Command(rt, "info")
+		if err := cmd.Run(); err == nil {
+			fmt.Printf("Using container runtime from CONTAINER_RUNTIME=%s\n", rt)
+			return true
+		}
+		fmt.Printf("CONTAINER_RUNTIME=%s specified but '%s info' failed: %v\n", rt, rt, errString(exec.Command(rt, "info").Run()))
+	}
+
+	// Try docker
 	if cmd := exec.Command("docker", "info"); cmd.Run() == nil {
+		fmt.Println("Found Docker runtime")
 		return true
+	} else {
+		fmt.Printf("docker info failed: %v\n", errString(exec.Command("docker", "info").Run()))
 	}
-	// 检查Podman
+
+	// Try podman
 	if cmd := exec.Command("podman", "info"); cmd.Run() == nil {
+		fmt.Println("Found Podman runtime (podman info)")
 		return true
+	} else {
+		fmt.Printf("podman info failed: %v\n", errString(exec.Command("podman", "info").Run()))
 	}
+
+	// Fallback for podman machine
+	if cmd := exec.Command("podman", "system", "connection", "list"); cmd.Run() == nil {
+		fmt.Println("Found Podman runtime (podman system connection list succeeded)")
+		return true
+	} else {
+		fmt.Printf("podman system connection list failed: %v\n", errString(exec.Command("podman", "system", "connection", "list").Run()))
+	}
+
+	fmt.Println("No container runtime available (docker/podman not responsive)")
 	return false
+}
+
+// errString helper to get error message or nil string
+func errString(err error) string {
+	if err == nil {
+		return "<nil>"
+	}
+	return err.Error()
 }
 
 // createTopicWithKafkaGo 使用kafka-go直接创建topic
